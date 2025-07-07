@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerador de Placas Hortifruti</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👨‍💻</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍎</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,8 +39,6 @@
         }
         /* Estilo para a lista de produtos */
         .product-list-item {
-            padding: 4px 8px;
-            border-radius: 4px;
             border-bottom: 1px solid #f0f0f0;
         }
          .product-list-item:last-child {
@@ -117,17 +115,20 @@
             <!-- Container da Lista com Cabeçalho -->
             <div class="mt-4 border rounded-md">
                 <!-- Cabeçalho da Lista (Responsivo) -->
-                <div class="flex items-center px-2 sm:px-4 py-2 bg-gray-50 font-bold text-gray-600 border-b-2 border-gray-200 text-xs sm:text-sm">
-                    <span class="w-10 text-center flex-shrink-0">Sel.</span>
-                    <span class="w-16 sm:w-20 flex-shrink-0">Código</span>
-                    <span class="flex-grow px-2">Descrição</span>
-                    <span class="w-20 sm:w-24 text-right flex-shrink-0">Preço</span>
-                    <span class="w-10 sm:w-12 text-center flex-shrink-0">Un.</span>
-                    <span class="w-16 text-center flex-shrink-0">Ação</span>
+                <div class="hidden sm:flex items-center px-4 py-2 bg-gray-50 font-bold text-gray-600 border-b-2 border-gray-200 text-sm">
+                    <div class="flex items-center flex-grow">
+                         <span class="w-10 text-center flex-shrink-0">Sel.</span>
+                         <span class="pl-2">Produto / Código</span>
+                    </div>
+                    <div class="flex items-center justify-end flex-shrink-0">
+                        <span class="w-24 text-right">Preço</span>
+                        <span class="w-12 text-center">Un.</span>
+                        <span class="w-16 text-center">Ação</span>
+                    </div>
                 </div>
                 <!-- Listas de Produtos -->
-                <div id="all-products-list" class="h-64 overflow-y-auto text-xs sm:text-sm"></div>
-                <div id="selected-products-list" class="h-64 overflow-y-auto hidden text-xs sm:text-sm"></div>
+                <div id="all-products-list" class="h-64 overflow-y-auto text-sm"></div>
+                <div id="selected-products-list" class="h-64 overflow-y-auto hidden text-sm"></div>
             </div>
         </div>
         
@@ -317,36 +318,53 @@
 
         function createProductListItem(p) {
             const item = document.createElement('div');
-            item.className = 'product-list-item flex items-center px-2 sm:px-4 py-2';
+            // Container principal do item, com layout flexível que muda de coluna para linha
+            item.className = 'product-list-item flex flex-col sm:flex-row sm:items-center justify-between px-3 py-3';
             if (p.selected) {
                 item.classList.add('selected');
             }
 
-            // Colunas com flex-shrink-0 para não encolherem e flex-grow para a descrição
+            // --- Seção Principal (Esquerda no Desktop, Topo no Mobile) ---
+            const mainInfo = document.createElement('div');
+            mainInfo.className = 'flex items-center w-full sm:flex-grow';
+
             const checkSpan = document.createElement('span');
-            checkSpan.className = 'w-10 text-center flex-shrink-0 cursor-pointer';
+            checkSpan.className = 'w-10 text-center flex-shrink-0 cursor-pointer text-lg';
             checkSpan.textContent = p.selected ? '✅' : '🔲';
             checkSpan.addEventListener('click', () => toggleItemSelection(p.code));
 
-            const codeSpan = document.createElement('span');
-            codeSpan.className = 'w-16 sm:w-20 truncate flex-shrink-0';
-            codeSpan.textContent = p.code;
+            // Agrupa Descrição e Código verticalmente
+            const descAndCode = document.createElement('div');
+            descAndCode.className = 'flex flex-col flex-grow pl-2';
 
             const descSpan = document.createElement('span');
-            descSpan.className = 'flex-grow truncate px-2';
-            descSpan.title = p.description;
+            descSpan.className = 'font-semibold text-gray-800';
             descSpan.textContent = p.description;
 
+            const codeSpan = document.createElement('span');
+            codeSpan.className = 'text-xs text-gray-500';
+            codeSpan.textContent = `Cód: ${p.code}`;
+
+            descAndCode.appendChild(descSpan);
+            descAndCode.appendChild(codeSpan);
+            
+            mainInfo.appendChild(checkSpan);
+            mainInfo.appendChild(descAndCode);
+
+            // --- Seção Secundária (Direita no Desktop, Embaixo no Mobile) ---
+            const secondaryInfo = document.createElement('div');
+            secondaryInfo.className = 'flex items-center justify-end w-full sm:w-auto sm:justify-start mt-2 sm:mt-0 flex-shrink-0';
+
             const priceSpan = document.createElement('span');
-            priceSpan.className = 'w-20 sm:w-24 text-right flex-shrink-0';
+            priceSpan.className = 'w-24 text-right font-semibold';
             priceSpan.textContent = `R$ ${p.price.toFixed(2)}`;
 
             const unitSpan = document.createElement('span');
-            unitSpan.className = 'w-10 sm:w-12 text-center flex-shrink-0';
+            unitSpan.className = 'w-12 text-center text-gray-600';
             unitSpan.textContent = p.unit;
 
             const actionSpan = document.createElement('span');
-            actionSpan.className = 'w-16 flex justify-center flex-shrink-0';
+            actionSpan.className = 'w-16 flex justify-center';
             const previewBtn = document.createElement('button');
             previewBtn.textContent = 'Ver';
             previewBtn.className = 'text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-1 px-2 rounded-full';
@@ -356,12 +374,12 @@
             });
             actionSpan.appendChild(previewBtn);
 
-            item.appendChild(checkSpan);
-            item.appendChild(codeSpan);
-            item.appendChild(descSpan);
-            item.appendChild(priceSpan);
-            item.appendChild(unitSpan);
-            item.appendChild(actionSpan);
+            secondaryInfo.appendChild(priceSpan);
+            secondaryInfo.appendChild(unitSpan);
+            secondaryInfo.appendChild(actionSpan);
+
+            item.appendChild(mainInfo);
+            item.appendChild(secondaryInfo);
 
             return item;
         }
