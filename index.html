@@ -246,7 +246,7 @@
 
         async function loadDefaultTxitensFile() {
             try {
-                const response = await fetch('txitens.txt');
+                const response = await fetch('TXITENS.txt');
                 if (!response.ok) throw new Error('Arquivo não encontrado');
                 const text = await response.text();
                 processTextFile(text, true); // Passa um flag para indicar que é o arquivo padrão
