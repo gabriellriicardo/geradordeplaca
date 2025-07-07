@@ -4,12 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerador de Placas Hortifruti</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👩‍💻</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍎</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Impact&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        /* Define a custom font family by loading the local font file */
+        @font-face {
+            font-family: 'Impact';
+            src: url('Impact.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
         /* Estilo para usar a fonte Impact, se disponível */
         .font-impact {
             font-family: 'Impact', sans-serif;
@@ -33,7 +41,6 @@
         .product-list-item {
             font-family: 'Courier New', Courier, monospace;
             white-space: pre;
-            cursor: pointer;
             padding: 4px 8px;
             border-radius: 4px;
         }
@@ -80,12 +87,12 @@
             <div>
                 <label for="file-input" class="block mb-2 font-bold text-gray-700">1. Arquivo de Itens (TXITENS):</label>
                 <input type="file" id="file-input" accept=".txt" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
-                <p id="txitens-status" class="text-xs text-gray-500 mt-1">Carregando arquivo padrão...</p>
+                <p id="txitens-status" class="text-xs text-gray-500 mt-1">A carregar ficheiro padrão...</p>
             </div>
             <div>
                 <label for="header-image-input" class="block mb-2 font-bold text-gray-700">2. Imagem de Cabeçalho:</label>
                 <input type="file" id="header-image-input" accept="image/jpeg, image/png" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                <p id="header-status" class="text-xs text-gray-500 mt-1">Carregando imagem padrão...</p>
+                <p id="header-status" class="text-xs text-gray-500 mt-1">A carregar imagem padrão...</p>
             </div>
         </div>
 
@@ -114,7 +121,7 @@
         <div class="bg-white p-6 rounded-lg shadow-md">
              <div class="flex items-center mb-4">
                 <input type="checkbox" id="save-individual-checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                <label for="save-individual-checkbox" class="ml-2 block text-sm text-gray-900">Salvar placas individuais</label>
+                <label for="save-individual-checkbox" class="ml-2 block text-sm text-gray-900">Guardar placas individuais</label>
             </div>
             <div id="progress-container" class="w-full bg-gray-200 rounded-full h-2.5 my-4 hidden">
                 <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
@@ -130,7 +137,7 @@
     <!-- Área de Impressão (oculta) -->
     <div class="print-area"></div>
 
-    <!-- Modal para Preview e Edição -->
+    <!-- Modal para Pré-visualização e Edição -->
     <div id="preview-modal" class="modal-backdrop hidden">
         <div class="modal-content text-center w-full max-w-lg">
             <h2 class="text-xl font-bold mb-4">Pré-visualização da Placa</h2>
@@ -161,11 +168,11 @@
                 </div>
                  <div>
                     <label class="block text-sm font-medium">Código:</label>
-                    <input type="text" id="edit-code" class="w-full p-2 border rounded-md" disabled>
+                    <input type="text" id="edit-code" class="w-full p-2 border rounded-md">
                 </div>
             </div>
             <div class="mt-6 flex flex-col sm:flex-row justify-end gap-2">
-                <button id="save-edit-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Salvar</button>
+                <button id="save-edit-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Guardar</button>
                 <button id="cancel-edit-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md">Cancelar</button>
             </div>
         </div>
@@ -246,13 +253,13 @@
 
         async function loadDefaultTxitensFile() {
             try {
-                const response = await fetch('TXITENS.txt');
-                if (!response.ok) throw new Error('Arquivo não encontrado');
+                const response = await fetch('txitens.txt');
+                if (!response.ok) throw new Error('Ficheiro não encontrado');
                 const text = await response.text();
-                processTextFile(text, true); // Passa um flag para indicar que é o arquivo padrão
+                processTextFile(text, true); // Passa um flag para indicar que é o ficheiro padrão
             } catch (error) {
                 console.error('Erro ao carregar txitens.txt padrão:', error);
-                txitensStatus.textContent = "Arquivo padrão não encontrado. Selecione um manualmente.";
+                txitensStatus.textContent = "Ficheiro padrão não encontrado. Selecione um manualmente.";
                 txitensStatus.className = 'text-xs text-red-600 mt-1';
             }
         }
@@ -280,7 +287,7 @@
             });
             updateAllLists();
             if (isDefault) {
-                txitensStatus.textContent = `Arquivo padrão 'txitens.txt' carregado com ${productsData.length} produtos.`;
+                txitensStatus.textContent = `Ficheiro padrão 'txitens.txt' carregado com ${productsData.length} produtos.`;
                 txitensStatus.className = 'text-xs text-green-600 mt-1';
             } else {
                 alert(`${productsData.length} produtos carregados com sucesso!`);
@@ -293,19 +300,39 @@
             updateSelectedCounter();
         }
 
+        function createProductListItem(p) {
+            const item = document.createElement('div');
+            item.className = 'product-list-item flex justify-between items-center';
+            if (p.selected) {
+                item.classList.add('selected');
+            }
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'flex-grow cursor-pointer';
+            const prefix = p.selected ? '[x]' : '[ ]';
+            textSpan.textContent = `${prefix} ${p.code.padEnd(5)} - ${p.description.substring(0, 25).padEnd(25)} | R$ ${p.price.toFixed(2).padStart(7)}`;
+            textSpan.addEventListener('click', () => toggleItemSelection(p.code));
+
+            const previewBtn = document.createElement('button');
+            previewBtn.textContent = 'Ver';
+            previewBtn.className = 'text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-1 px-2 rounded-full ml-2 flex-shrink-0';
+            previewBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                showPreview(p.code);
+            });
+
+            item.appendChild(textSpan);
+            item.appendChild(previewBtn);
+            return item;
+        }
+
         function updateProductListDisplay() {
             const searchTerm = searchInput.value.toUpperCase();
             allProductsList.innerHTML = '';
             productsData
                 .filter(p => p.description.toUpperCase().includes(searchTerm) || p.code.includes(searchTerm))
-                .forEach((p, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'product-list-item';
-                    const prefix = p.selected ? '[x]' : '[ ]';
-                    item.textContent = `${prefix} ${p.code.padEnd(5)} - ${p.description.substring(0, 40).padEnd(40)} | R$ ${p.price.toFixed(2).padStart(8)} ${p.unit}`;
-                    item.dataset.code = p.code;
-                    item.addEventListener('click', () => toggleItemSelection(p.code));
-                    item.addEventListener('dblclick', () => showPreview(p.code));
+                .forEach(p => {
+                    const item = createProductListItem(p);
                     allProductsList.appendChild(item);
                 });
         }
@@ -315,11 +342,10 @@
             productsData
                 .filter(p => p.selected)
                 .forEach(p => {
-                    const item = document.createElement('div');
-                    item.className = 'product-list-item';
-                    item.textContent = `${p.code.padEnd(5)} - ${p.description.substring(0, 40).padEnd(40)} | R$ ${p.price.toFixed(2).padStart(8)} ${p.unit}`;
-                    item.dataset.code = p.code;
-                    item.addEventListener('dblclick', () => showPreview(p.code));
+                    const item = createProductListItem(p);
+                    // Na lista de selecionados, o clique no texto não faz nada, apenas o botão funciona.
+                    item.querySelector('span').removeEventListener('click', () => toggleItemSelection(p.code));
+                    item.querySelector('span').style.cursor = 'default';
                     selectedProductsList.appendChild(item);
                 });
         }
@@ -454,7 +480,7 @@
                     
                     const progress = ((i + 1) / productsToGenerate.length) * 100;
                     progressBar.style.width = `${progress}%`;
-                    progressLabel.textContent = `Gerando placa ${i+1}/${productsToGenerate.length}...`;
+                    progressLabel.textContent = `A gerar placa ${i+1}/${productsToGenerate.length}...`;
                 }
 
                 for (let i = 0; i < productCanvases.length; i += 2) {
@@ -519,9 +545,27 @@
         function saveChanges() {
             if (!productToEdit) return;
 
-            productToEdit.description = document.getElementById('edit-description').value;
-            productToEdit.price = parseFloat(document.getElementById('edit-price').value);
-            productToEdit.unit = document.getElementById('edit-unit').value.toUpperCase();
+            const newCode = document.getElementById('edit-code').value.trim();
+            const newDescription = document.getElementById('edit-description').value;
+            const newPrice = parseFloat(document.getElementById('edit-price').value);
+            const newUnit = document.getElementById('edit-unit').value.toUpperCase();
+
+            if (!newCode) {
+                alert("O código não pode estar vazio.");
+                return;
+            }
+
+            // Verifica se o novo código já existe em outro produto
+            const isDuplicate = productsData.some(p => p.code === newCode && p !== productToEdit);
+            if (isDuplicate) {
+                alert("Este código já está a ser utilizado por outro produto. Por favor, escolha um código único.");
+                return;
+            }
+
+            productToEdit.code = newCode;
+            productToEdit.description = newDescription;
+            productToEdit.price = newPrice;
+            productToEdit.unit = newUnit;
             
             updateAllLists();
             editModal.classList.add('hidden');
@@ -541,7 +585,7 @@
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     processTextFile(e.target.result);
-                    txitensStatus.textContent = `Arquivo '${file.name}' carregado.`;
+                    txitensStatus.textContent = `Ficheiro '${file.name}' carregado.`;
                     txitensStatus.className = 'text-xs text-green-600 mt-1';
                 };
                 reader.readAsText(file, 'utf-8');
