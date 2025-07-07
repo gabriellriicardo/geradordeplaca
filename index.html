@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Placas Hortifruti</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👩‍💻</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Impact&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilo para usar a fonte Impact, se disponível */
+        .font-impact {
+            font-family: 'Impact', sans-serif;
+        }
+        /* Esconde elementos que não devem aparecer na impressão */
+        @media print {
+            body > *:not(.print-area) {
+                display: none;
+            }
+            .print-area, .print-area > * {
+                display: block;
+                width: 100%;
+                height: auto;
+            }
+            @page {
+                size: A4;
+                margin: 1cm;
+            }
+        }
+        /* Estilo para a lista de produtos */
+        .product-list-item {
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .product-list-item:hover {
+            background-color: #e2e8f0;
+        }
+        .product-list-item.selected {
+            background-color: #cce7ff;
+        }
+        /* Estilo para modais */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <header class="text-center mb-6">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-700">Gerador de Placas Hortifruti</h1>
+            <p class="text-sm text-blue-600 hover:underline cursor-pointer" onclick="openAuthorLink()">By Gabriel Ricardo</p>
+        </header>
+
+        <!-- Seção de Upload de Arquivos -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="file-input" class="block mb-2 font-bold text-gray-700">1. Arquivo de Itens (TXITENS):</label>
+                <input type="file" id="file-input" accept=".txt" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+                <p id="txitens-status" class="text-xs text-gray-500 mt-1">Carregando arquivo padrão...</p>
+            </div>
+            <div>
+                <label for="header-image-input" class="block mb-2 font-bold text-gray-700">2. Imagem de Cabeçalho:</label>
+                <input type="file" id="header-image-input" accept="image/jpeg, image/png" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                <p id="header-status" class="text-xs text-gray-500 mt-1">Carregando imagem padrão...</p>
+            </div>
+        </div>
+
+        <!-- Seção de Pesquisa e Listas -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+                <label for="search-input" class="font-bold">3. Pesquise e selecione:</label>
+                <button id="deselect-all-btn" class="text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-md w-full sm:w-auto">Desmarcar Todos</button>
+            </div>
+            <input type="text" id="search-input" placeholder="Pesquisar por nome ou código..." class="w-full p-2 border border-gray-300 rounded-md mb-4">
+
+            <!-- Abas -->
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-4 sm:space-x-8 text-sm sm:text-base" aria-label="Tabs">
+                    <button id="tab-all" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium border-indigo-500 text-indigo-600">Todos</button>
+                    <button id="tab-selected" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Selecionados (0)</button>
+                </nav>
+            </div>
+
+            <!-- Listas de Produtos -->
+            <div id="all-products-list" class="mt-4 h-48 sm:h-64 overflow-y-auto border rounded-md text-xs sm:text-sm"></div>
+            <div id="selected-products-list" class="mt-4 h-48 sm:h-64 overflow-y-auto border rounded-md hidden text-xs sm:text-sm"></div>
+        </div>
+        
+        <!-- Opções e Botões de Ação -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+             <div class="flex items-center mb-4">
+                <input type="checkbox" id="save-individual-checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                <label for="save-individual-checkbox" class="ml-2 block text-sm text-gray-900">Salvar placas individuais</label>
+            </div>
+            <div id="progress-container" class="w-full bg-gray-200 rounded-full h-2.5 my-4 hidden">
+                <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                <p id="progress-label" class="text-center text-sm mt-1"></p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button id="generate-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300">Gerar Folhas para Impressão</button>
+                <button id="print-btn" class="w-full bg-gray-500 text-white font-bold py-3 px-4 rounded-lg transition duration-300 disabled:opacity-50" disabled>Imprimir Folhas Geradas</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área de Impressão (oculta) -->
+    <div class="print-area"></div>
+
+    <!-- Modal para Preview e Edição -->
+    <div id="preview-modal" class="modal-backdrop hidden">
+        <div class="modal-content text-center w-full max-w-lg">
+            <h2 class="text-xl font-bold mb-4">Pré-visualização da Placa</h2>
+            <canvas id="preview-canvas" class="border mx-auto" style="max-width: 100%; height: auto;"></canvas>
+            <div class="mt-4 flex flex-col sm:flex-row justify-center gap-2">
+                <button id="edit-from-preview-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-md">Editar</button>
+                <button id="close-preview-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md">Fechar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para Edição de Produto -->
+    <div id="edit-modal" class="modal-backdrop hidden">
+        <div class="modal-content w-full max-w-md">
+            <h2 class="text-xl font-bold mb-4">Editar Produto</h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium">Descrição:</label>
+                    <input type="text" id="edit-description" class="w-full p-2 border rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Preço:</label>
+                    <input type="number" step="0.01" id="edit-price" class="w-full p-2 border rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Unidade:</label>
+                    <input type="text" id="edit-unit" class="w-full p-2 border rounded-md">
+                </div>
+                 <div>
+                    <label class="block text-sm font-medium">Código:</label>
+                    <input type="text" id="edit-code" class="w-full p-2 border rounded-md" disabled>
+                </div>
+            </div>
+            <div class="mt-6 flex flex-col sm:flex-row justify-end gap-2">
+                <button id="save-edit-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Salvar</button>
+                <button id="cancel-edit-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Constantes de Configuração ---
+        const PLATE_WIDTH = 1771;
+        const PLATE_HEIGHT = 1300;
+        const DPI = 300;
+        const A4_WIDTH_PX = parseInt(8.27 * DPI);
+        const A4_HEIGHT_PX = parseInt(11.69 * DPI);
+
+        // --- Estado da Aplicação ---
+        let productsData = [];
+        let headerImage = null;
+        let generatedA4Paths = [];
+        let productToEdit = null;
+
+        // --- Seletores de Elementos do DOM ---
+        const fileInput = document.getElementById('file-input');
+        const headerImageInput = document.getElementById('header-image-input');
+        const searchInput = document.getElementById('search-input');
+        const allProductsList = document.getElementById('all-products-list');
+        const selectedProductsList = document.getElementById('selected-products-list');
+        const tabAll = document.getElementById('tab-all');
+        const tabSelected = document.getElementById('tab-selected');
+        const deselectAllBtn = document.getElementById('deselect-all-btn');
+        const generateBtn = document.getElementById('generate-btn');
+        const printBtn = document.getElementById('print-btn');
+        const saveIndividualCheckbox = document.getElementById('save-individual-checkbox');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressLabel = document.getElementById('progress-label');
+        const printArea = document.querySelector('.print-area');
+        const headerStatus = document.getElementById('header-status');
+        const txitensStatus = document.getElementById('txitens-status');
+        
+        // Modais
+        const previewModal = document.getElementById('preview-modal');
+        const editModal = document.getElementById('edit-modal');
+        const previewCanvas = document.getElementById('preview-canvas');
+        const closePreviewBtn = document.getElementById('close-preview-btn');
+        const editFromPreviewBtn = document.getElementById('edit-from-preview-btn');
+        const saveEditBtn = document.getElementById('save-edit-btn');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+
+
+        // --- Funções de Lógica ---
+
+        function openAuthorLink() {
+            if (confirm("Deseja visitar a página do autor do programa?")) {
+                window.open("https://github.com/gabriellriicardo", "_blank");
+            }
+        }
+        
+        async function loadDefaultHeaderImage() {
+            try {
+                const response = await fetch('hortifrut.jpeg');
+                if (!response.ok) throw new Error('Imagem não encontrada');
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const img = new Image();
+                img.onload = () => {
+                    headerImage = img;
+                    headerStatus.textContent = "Imagem padrão 'hortifrut.jpeg' carregada.";
+                    headerStatus.className = 'text-xs text-green-600 mt-1';
+                };
+                img.onerror = () => { throw new Error('Falha ao carregar a imagem.'); };
+                img.src = url;
+            } catch (error) {
+                console.error('Erro ao carregar imagem padrão:', error);
+                headerStatus.textContent = "Imagem padrão não encontrada. Selecione uma manualmente.";
+                headerStatus.className = 'text-xs text-red-600 mt-1';
+            }
+        }
+
+        async function loadDefaultTxitensFile() {
+            try {
+                const response = await fetch('txitens.txt');
+                if (!response.ok) throw new Error('Arquivo não encontrado');
+                const text = await response.text();
+                processTextFile(text, true); // Passa um flag para indicar que é o arquivo padrão
+            } catch (error) {
+                console.error('Erro ao carregar txitens.txt padrão:', error);
+                txitensStatus.textContent = "Arquivo padrão não encontrado. Selecione um manualmente.";
+                txitensStatus.className = 'text-xs text-red-600 mt-1';
+            }
+        }
+
+        function processTextFile(content, isDefault = false) {
+            productsData = [];
+            const lines = content.split('\n');
+            lines.forEach(line => {
+                if (line.trim().length < 30) return;
+                try {
+                    const description = line.substring(19).replace(/^0+/, '').trim();
+                    const descUpper = description.toUpperCase();
+                    const unit = ["BDJ", " UN", "UND"].some(term => descUpper.includes(term)) ? "UN" : "KG";
+                    
+                    productsData.push({
+                        code: line.substring(7, 11),
+                        price: parseInt(line.substring(11, 19)) / 10000,
+                        description: description,
+                        unit: unit,
+                        selected: false
+                    });
+                } catch (e) {
+                    console.warn(`Linha ignorada por má formatação: ${line.trim()}`);
+                }
+            });
+            updateAllLists();
+            if (isDefault) {
+                txitensStatus.textContent = `Arquivo padrão 'txitens.txt' carregado com ${productsData.length} produtos.`;
+                txitensStatus.className = 'text-xs text-green-600 mt-1';
+            } else {
+                alert(`${productsData.length} produtos carregados com sucesso!`);
+            }
+        }
+
+        function updateAllLists() {
+            updateProductListDisplay();
+            updateSelectedListDisplay();
+            updateSelectedCounter();
+        }
+
+        function updateProductListDisplay() {
+            const searchTerm = searchInput.value.toUpperCase();
+            allProductsList.innerHTML = '';
+            productsData
+                .filter(p => p.description.toUpperCase().includes(searchTerm) || p.code.includes(searchTerm))
+                .forEach((p, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'product-list-item';
+                    const prefix = p.selected ? '[x]' : '[ ]';
+                    item.textContent = `${prefix} ${p.code.padEnd(5)} - ${p.description.substring(0, 40).padEnd(40)} | R$ ${p.price.toFixed(2).padStart(8)} ${p.unit}`;
+                    item.dataset.code = p.code;
+                    item.addEventListener('click', () => toggleItemSelection(p.code));
+                    item.addEventListener('dblclick', () => showPreview(p.code));
+                    allProductsList.appendChild(item);
+                });
+        }
+        
+        function updateSelectedListDisplay() {
+            selectedProductsList.innerHTML = '';
+            productsData
+                .filter(p => p.selected)
+                .forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'product-list-item';
+                    item.textContent = `${p.code.padEnd(5)} - ${p.description.substring(0, 40).padEnd(40)} | R$ ${p.price.toFixed(2).padStart(8)} ${p.unit}`;
+                    item.dataset.code = p.code;
+                    item.addEventListener('dblclick', () => showPreview(p.code));
+                    selectedProductsList.appendChild(item);
+                });
+        }
+
+        function updateSelectedCounter() {
+            const count = productsData.filter(p => p.selected).length;
+            tabSelected.textContent = `Selecionados (${count})`;
+        }
+
+        function toggleItemSelection(code) {
+            const product = productsData.find(p => p.code === code);
+            if (product) {
+                product.selected = !product.selected;
+                updateAllLists();
+            }
+        }
+        
+        function deselectAll() {
+            productsData.forEach(p => p.selected = false);
+            updateAllLists();
+        }
+
+        async function createProductImage(product) {
+            const canvas = document.createElement('canvas');
+            canvas.width = PLATE_WIDTH;
+            canvas.height = PLATE_HEIGHT;
+            const ctx = canvas.getContext('2d');
+
+            // Fundo branco
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, PLATE_WIDTH, PLATE_HEIGHT);
+
+            // Imagem de cabeçalho
+            if (headerImage) {
+                const newHeight = parseInt(PLATE_WIDTH * headerImage.height / headerImage.width);
+                ctx.drawImage(headerImage, 0, 0, PLATE_WIDTH, newHeight);
+            }
+
+            // Borda
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 6;
+            ctx.strokeRect(0, 0, PLATE_WIDTH, PLATE_HEIGHT);
+
+            // Textos
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            ctx.fillStyle = 'black';
+            ctx.font = "165px Impact, sans-serif";
+            ctx.fillText(product.description.toUpperCase(), PLATE_WIDTH / 2, 700);
+
+            ctx.fillStyle = 'red';
+            ctx.font = "90px Impact, sans-serif";
+            ctx.fillText(product.code, PLATE_WIDTH - 200, 900);
+
+            ctx.fillStyle = 'black';
+            ctx.font = "400px Impact, sans-serif";
+            ctx.fillText(product.price.toFixed(2).replace('.', ','), PLATE_WIDTH / 2, 1100);
+
+            ctx.font = "130px Impact, sans-serif";
+            ctx.fillText("R$", 200, 900);
+            
+            ctx.font = "120px Impact, sans-serif";
+            ctx.fillText(product.unit.toUpperCase(), PLATE_WIDTH - 180, 1150);
+            
+            if (saveIndividualCheckbox.checked) {
+                const safeFilename = `${product.code}_${product.description.trim().replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+                downloadCanvas(canvas, safeFilename);
+            }
+
+            return canvas;
+        }
+
+        async function assembleA4Sheet(canvases, sheetNumber) {
+            const a4Canvas = document.createElement('canvas');
+            a4Canvas.width = A4_WIDTH_PX;
+            a4Canvas.height = A4_HEIGHT_PX;
+            const ctx = a4Canvas.getContext('2d');
+
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, A4_WIDTH_PX, A4_HEIGHT_PX);
+
+            const plateWidthOnSheet = parseInt(A4_WIDTH_PX * 0.8);
+            const plateHeightOnSheet = parseInt(plateWidthOnSheet * (PLATE_HEIGHT / PLATE_WIDTH));
+            const marginX = (A4_WIDTH_PX - plateWidthOnSheet) / 2;
+            const marginY = (A4_HEIGHT_PX - (plateHeightOnSheet * 2)) / 4;
+
+            const positions = [
+                { x: marginX, y: marginY },
+                { x: marginX, y: marginY * 3 + plateHeightOnSheet }
+            ];
+
+            for (let i = 0; i < canvases.length; i++) {
+                ctx.drawImage(canvases[i], positions[i].x, positions[i].y, plateWidthOnSheet, plateHeightOnSheet);
+            }
+            
+            return a4Canvas;
+        }
+        
+        function downloadCanvas(canvas, filename) {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        async function handleGenerate() {
+            const productsToGenerate = productsData.filter(p => p.selected);
+            if (productsToGenerate.length === 0) {
+                alert("Por favor, marque um ou mais produtos.");
+                return;
+            }
+            if (!headerImage) {
+                alert("Nenhuma imagem de cabeçalho carregada. Por favor, selecione uma.");
+                return;
+            }
+
+            generateBtn.disabled = true;
+            printBtn.disabled = true;
+            progressContainer.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            
+            printArea.innerHTML = '';
+            generatedA4Paths = [];
+
+            try {
+                const productCanvases = [];
+                for (let i = 0; i < productsToGenerate.length; i++) {
+                    const product = productsToGenerate[i];
+                    const canvas = await createProductImage(product);
+                    productCanvases.push(canvas);
+                    
+                    const progress = ((i + 1) / productsToGenerate.length) * 100;
+                    progressBar.style.width = `${progress}%`;
+                    progressLabel.textContent = `Gerando placa ${i+1}/${productsToGenerate.length}...`;
+                }
+
+                for (let i = 0; i < productCanvases.length; i += 2) {
+                    const batch = productCanvases.slice(i, i + 2);
+                    const sheetNumber = (i / 2) + 1;
+                    const a4Canvas = await assembleA4Sheet(batch, sheetNumber);
+                    
+                    const img = document.createElement('img');
+                    img.src = a4Canvas.toDataURL('image/png');
+                    img.style.width = '100%';
+                    img.style.pageBreakAfter = 'always';
+                    printArea.appendChild(img);
+                    generatedA4Paths.push(img.src);
+                }
+                
+                alert(`${generatedA4Paths.length} folha(s) foram geradas e estão prontas para impressão.`);
+                printBtn.disabled = false;
+
+            } catch (e) {
+                alert(`Ocorreu um erro ao gerar as folhas: ${e.message}`);
+                console.error(e);
+            } finally {
+                generateBtn.disabled = false;
+                progressContainer.classList.add('hidden');
+            }
+        }
+
+        async function showPreview(code) {
+            const product = productsData.find(p => p.code === code);
+            if (!product) return;
+            if (!headerImage) {
+                alert("Nenhuma imagem de cabeçalho carregada. Por favor, selecione uma para gerar a pré-visualização.");
+                return;
+            }
+            
+            productToEdit = product;
+
+            const fullCanvas = await createProductImage(product);
+            const previewWidth = Math.min(450, window.innerWidth - 80);
+            const previewHeight = parseInt(previewWidth * (PLATE_HEIGHT / PLATE_WIDTH));
+            
+            previewCanvas.width = previewWidth;
+            previewCanvas.height = previewHeight;
+            const ctx = previewCanvas.getContext('2d');
+            ctx.drawImage(fullCanvas, 0, 0, previewWidth, previewHeight);
+
+            previewModal.classList.remove('hidden');
+        }
+        
+        function openEditWindow() {
+            if (!productToEdit) return;
+            
+            document.getElementById('edit-description').value = productToEdit.description;
+            document.getElementById('edit-price').value = productToEdit.price;
+            document.getElementById('edit-unit').value = productToEdit.unit;
+            document.getElementById('edit-code').value = productToEdit.code;
+
+            previewModal.classList.add('hidden');
+            editModal.classList.remove('hidden');
+        }
+
+        function saveChanges() {
+            if (!productToEdit) return;
+
+            productToEdit.description = document.getElementById('edit-description').value;
+            productToEdit.price = parseFloat(document.getElementById('edit-price').value);
+            productToEdit.unit = document.getElementById('edit-unit').value.toUpperCase();
+            
+            updateAllLists();
+            editModal.classList.add('hidden');
+            productToEdit = null;
+        }
+
+
+        // --- Event Listeners ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDefaultHeaderImage();
+            loadDefaultTxitensFile();
+        });
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    processTextFile(e.target.result);
+                    txitensStatus.textContent = `Arquivo '${file.name}' carregado.`;
+                    txitensStatus.className = 'text-xs text-green-600 mt-1';
+                };
+                reader.readAsText(file, 'utf-8');
+            }
+        });
+
+        headerImageInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => { 
+                        headerImage = img; 
+                        headerStatus.textContent = `Imagem '${file.name}' carregada.`;
+                        headerStatus.className = 'text-xs text-green-600 mt-1';
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        searchInput.addEventListener('input', updateProductListDisplay);
+        deselectAllBtn.addEventListener('click', deselectAll);
+        generateBtn.addEventListener('click', handleGenerate);
+        printBtn.addEventListener('click', () => window.print());
+
+        tabAll.addEventListener('click', () => {
+            tabAll.classList.add('border-indigo-500', 'text-indigo-600');
+            tabAll.classList.remove('border-transparent', 'text-gray-500');
+            tabSelected.classList.remove('border-indigo-500', 'text-indigo-600');
+            tabSelected.classList.add('border-transparent', 'text-gray-500');
+            allProductsList.classList.remove('hidden');
+            selectedProductsList.classList.add('hidden');
+        });
+
+        tabSelected.addEventListener('click', () => {
+            tabSelected.classList.add('border-indigo-500', 'text-indigo-600');
+            tabSelected.classList.remove('border-transparent', 'text-gray-500');
+            tabAll.classList.remove('border-indigo-500', 'text-indigo-600');
+            tabAll.classList.add('border-transparent', 'text-gray-500');
+            selectedProductsList.classList.remove('hidden');
+            allProductsList.classList.add('hidden');
+        });
+        
+        // Modal listeners
+        closePreviewBtn.addEventListener('click', () => previewModal.classList.add('hidden'));
+        editFromPreviewBtn.addEventListener('click', openEditWindow);
+        saveEditBtn.addEventListener('click', saveChanges);
+        cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
+
+    </script>
+</body>
+</html>
