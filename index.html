@@ -240,7 +240,6 @@
         // --- Funções de Lógica ---
 
         function openAuthorLink() {
-            // Usando um modal customizado em vez de confirm()
             showCustomConfirm("Deseja visitar a página do autor do programa?", () => {
                  window.open("https://github.com/gabriellriicardo", "_blank");
             });
@@ -272,7 +271,7 @@
                 const response = await fetch('TXITENS.txt');
                 if (!response.ok) throw new Error('Ficheiro não encontrado');
                 const text = await response.text();
-                processTextFile(text, true); // Passa um flag para indicar que é o ficheiro padrão
+                processTextFile(text, true);
             } catch (error) {
                 console.error('Erro ao carregar txitens.txt padrão:', error);
                 txitensStatus.textContent = "Ficheiro padrão não encontrado. Selecione um manualmente.";
@@ -301,7 +300,9 @@
                     console.warn(`Linha ignorada por má formatação: ${line.trim()}`);
                 }
             });
-            updateAllLists();
+            updateProductListDisplay();
+            updateSelectedListDisplay();
+            updateSelectedCounter();
             if (isDefault) {
                 txitensStatus.textContent = `Ficheiro padrão 'txitens.txt' carregado com ${productsData.length} produtos.`;
                 txitensStatus.className = 'text-xs text-green-600 mt-1';
@@ -310,30 +311,22 @@
             }
         }
 
-        function updateAllLists() {
-            updateProductListDisplay();
-            updateSelectedListDisplay();
-            updateSelectedCounter();
-        }
-
-        function createProductListItem(p) {
+        function createProductListItem(p, listType) {
             const item = document.createElement('div');
-            // Container principal do item, com layout flexível que muda de coluna para linha
+            item.id = `product-${listType}-${p.code}`; // ID único para cada item em cada lista
             item.className = 'product-list-item flex flex-col sm:flex-row sm:items-center justify-between px-3 py-3';
             if (p.selected) {
                 item.classList.add('selected');
             }
 
-            // --- Seção Principal (Esquerda no Desktop, Topo no Mobile) ---
             const mainInfo = document.createElement('div');
             mainInfo.className = 'flex items-center w-full sm:flex-grow';
 
             const checkSpan = document.createElement('span');
-            checkSpan.className = 'w-10 text-center flex-shrink-0 cursor-pointer text-lg';
+            checkSpan.className = 'w-10 text-center flex-shrink-0 cursor-pointer text-lg check-span'; // Classe para fácil acesso
             checkSpan.textContent = p.selected ? '✅' : '🔲';
             checkSpan.addEventListener('click', () => toggleItemSelection(p.code));
 
-            // Agrupa Descrição e Código verticalmente
             const descAndCode = document.createElement('div');
             descAndCode.className = 'flex flex-col flex-grow pl-2';
 
@@ -351,7 +344,6 @@
             mainInfo.appendChild(checkSpan);
             mainInfo.appendChild(descAndCode);
 
-            // --- Seção Secundária (Direita no Desktop, Embaixo no Mobile) ---
             const secondaryInfo = document.createElement('div');
             secondaryInfo.className = 'flex items-center justify-end w-full sm:w-auto sm:justify-start mt-2 sm:mt-0 flex-shrink-0';
 
@@ -384,14 +376,13 @@
             return item;
         }
 
-
         function updateProductListDisplay() {
             const searchTerm = searchInput.value.toUpperCase();
             allProductsList.innerHTML = '';
             productsData
                 .filter(p => p.description.toUpperCase().includes(searchTerm) || p.code.includes(searchTerm))
                 .forEach(p => {
-                    const item = createProductListItem(p);
+                    const item = createProductListItem(p, 'all');
                     allProductsList.appendChild(item);
                 });
         }
@@ -401,7 +392,7 @@
             productsData
                 .filter(p => p.selected)
                 .forEach(p => {
-                    const item = createProductListItem(p);
+                    const item = createProductListItem(p, 'selected');
                     selectedProductsList.appendChild(item);
                 });
         }
@@ -411,17 +402,47 @@
             tabSelected.textContent = `Selecionados (${count})`;
         }
 
+        // --- FUNÇÕES OTIMIZADAS ---
+
         function toggleItemSelection(code) {
             const product = productsData.find(p => p.code === code);
-            if (product) {
-                product.selected = !product.selected;
-                updateAllLists();
+            if (!product) return;
+
+            product.selected = !product.selected;
+
+            // Atualiza o item na lista principal ("Todos")
+            const itemInAllList = document.getElementById(`product-all-${code}`);
+            if (itemInAllList) {
+                itemInAllList.classList.toggle('selected', product.selected);
+                itemInAllList.querySelector('.check-span').textContent = product.selected ? '✅' : '🔲';
             }
+
+            // Atualiza o item na lista de selecionados
+            const itemInSelectedList = document.getElementById(`product-selected-${code}`);
+            if (product.selected && !itemInSelectedList) {
+                // Adiciona à lista de selecionados se não estiver lá
+                selectedProductsList.appendChild(createProductListItem(product, 'selected'));
+            } else if (!product.selected && itemInSelectedList) {
+                // Remove da lista de selecionados
+                itemInSelectedList.remove();
+            }
+            
+            updateSelectedCounter();
         }
         
         function deselectAll() {
-            productsData.forEach(p => p.selected = false);
-            updateAllLists();
+            productsData.forEach(p => {
+                if (p.selected) {
+                    p.selected = false;
+                    const itemInAllList = document.getElementById(`product-all-${p.code}`);
+                    if (itemInAllList) {
+                        itemInAllList.classList.remove('selected');
+                        itemInAllList.querySelector('.check-span').textContent = '🔲';
+                    }
+                }
+            });
+            selectedProductsList.innerHTML = '';
+            updateSelectedCounter();
         }
 
         async function createProductImage(product) {
@@ -617,7 +638,10 @@
             productToEdit.price = newPrice;
             productToEdit.unit = newUnit;
             
-            updateAllLists();
+            // Re-render as listas para refletir a mudança
+            updateProductListDisplay();
+            updateSelectedListDisplay();
+            
             editModal.classList.add('hidden');
             productToEdit = null;
         }
