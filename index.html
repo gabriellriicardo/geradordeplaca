@@ -22,6 +22,26 @@
         .font-impact {
             font-family: 'Impact', sans-serif;
         }
+
+        /* Estilos para a área de pré-visualização das folhas geradas (TELA) */
+        .print-area {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5rem; /* Espaçamento entre as imagens */
+            margin-top: 1.5rem;
+            padding: 1rem;
+        }
+
+        .print-area img {
+            max-width: 250px; /* Largura máxima da pré-visualização */
+            height: auto;
+            border: 1px solid #d1d5db; /* Borda cinza */
+            border-radius: 0.5rem; /* Cantos arredondados */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            background-color: white;
+        }
+
         /* Esconde elementos que não devem aparecer na impressão */
         @media print {
             body > *:not(.print-area) {
@@ -31,6 +51,19 @@
                 display: block;
                 width: 100%;
                 height: auto;
+            }
+            .print-area {
+                margin: 0;
+                padding: 0;
+                gap: 0;
+            }
+            .print-area img {
+                /* Reset styles for printing */
+                max-width: none;
+                border: none;
+                border-radius: 0;
+                box-shadow: none;
+                background-color: transparent;
             }
             @page {
                 size: A4;
@@ -149,7 +182,7 @@
         </div>
     </div>
 
-    <!-- Área de Impressão (oculta) -->
+    <!-- Área de Impressão (oculta na tela, visível para impressão) -->
     <div class="print-area"></div>
 
     <!-- Modal para Pré-visualização e Edição -->
@@ -283,7 +316,7 @@
             productsData = [];
             const lines = content.split('\n');
             lines.forEach(line => {
-                if (line.trim().length < 30) return;
+                if (line.trim().length < 19) return;
                 try {
                     const description = line.substring(19).replace(/^0+/, '').trim();
                     const descUpper = description.toUpperCase();
@@ -484,6 +517,18 @@
             ctx.font = "120px Impact, sans-serif";
             ctx.fillText(product.unit.toUpperCase(), PLATE_WIDTH - 180, 1150);
             
+            const today = new Date();
+            const day = String(today.getDate()).padStart(2, '0');
+            const month = String(today.getMonth() + 1).padStart(2, '0'); // Janeiro é 0!
+            const year = today.getFullYear();
+            const formattedDate = `Gerado em: ${day}/${month}/${year}`;
+
+            ctx.fillStyle = '#4A5568'; // Um cinza escuro, menos chamativo
+            ctx.font = "45px Roboto, sans-serif"; // Usar uma fonte mais limpa para a data
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(formattedDate, 40, PLATE_HEIGHT - 30);
+
             if (saveIndividualCheckbox.checked) {
                 const safeFilename = `${product.code}_${product.description.trim().replace(/[^a-zA-Z0-9]/g, '_')}.png`;
                 downloadCanvas(canvas, safeFilename);
@@ -562,7 +607,6 @@
                     
                     const img = document.createElement('img');
                     img.src = a4Canvas.toDataURL('image/png');
-                    img.style.width = '100%';
                     img.style.pageBreakAfter = 'always';
                     printArea.appendChild(img);
                     generatedA4Paths.push(img.src);
@@ -679,6 +723,17 @@
             confirmBox.querySelector('#confirm-no').onclick = () => confirmBox.remove();
             document.body.appendChild(confirmBox);
         }
+        
+        // --- Funções Utilitárias ---
+        function debounce(func, delay = 300) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    func.apply(this, args);
+                }, delay);
+            };
+        }
 
         // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -716,7 +771,7 @@
             }
         });
         
-        searchInput.addEventListener('input', updateProductListDisplay);
+        searchInput.addEventListener('input', debounce(updateProductListDisplay));
         deselectAllBtn.addEventListener('click', deselectAll);
         generateBtn.addEventListener('click', handleGenerate);
         printBtn.addEventListener('click', () => window.print());
